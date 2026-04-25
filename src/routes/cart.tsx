@@ -38,32 +38,32 @@ function CartPage() {
               {/* Cart Items */}
               <div className="lg:col-span-2 space-y-4">
                 {items.map((item) => (
-                  <div key={item.product.id} className="flex gap-4 sm:gap-6 bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 hover:shadow-lg transition-all duration-300">
+                  <div key={item.product.maSanPham} className="flex gap-4 sm:gap-6 bg-white rounded-2xl p-4 sm:p-6 border border-gray-100 hover:shadow-lg transition-all duration-300">
                     <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                      <img src={item.product.image} alt={item.product.name} className="w-full h-full object-cover" />
+                      <img src={item.product.hinhAnh || ""} alt={item.product.tenSP} className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 flex flex-col">
                       <div className="flex justify-between items-start">
                         <div>
-                          <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">{item.product.brand}</p>
-                          <h3 className="font-semibold text-gray-900 text-sm sm:text-base leading-tight mt-1">{item.product.name}</h3>
+                          <p className="text-[10px] font-bold text-orange-500 uppercase tracking-wider">{item.product.thuongHieu?.tenTH || "SNEAKER"}</p>
+                          <h3 className="font-semibold text-gray-900 text-sm sm:text-base leading-tight mt-1">{item.product.tenSP}</h3>
                           <p className="text-xs text-gray-500 mt-1">Size: {item.size}</p>
                         </div>
-                        <button onClick={() => removeItem(item.product.id)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
+                        <button onClick={() => removeItem(item.product.maSanPham)} className="text-gray-400 hover:text-red-500 transition-colors p-1">
                           <X className="h-4 w-4" />
                         </button>
                       </div>
                       <div className="mt-auto flex items-center justify-between pt-3">
                         <div className="flex items-center gap-2 bg-gray-100 rounded-full">
-                          <button onClick={() => updateQuantity(item.product.id, item.quantity - 1)} className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                          <button onClick={() => updateQuantity(item.product.maSanPham, item.quantity - 1)} className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
                             <Minus className="h-3 w-3" />
                           </button>
                           <span className="text-sm font-semibold w-6 text-center">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.product.id, item.quantity + 1)} className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
+                          <button onClick={() => updateQuantity(item.product.maSanPham, item.quantity + 1)} className="h-8 w-8 rounded-full flex items-center justify-center hover:bg-gray-200 transition-colors">
                             <Plus className="h-3 w-3" />
                           </button>
                         </div>
-                        <span className="font-bold text-gray-900 text-lg">${item.product.price * item.quantity}</span>
+                        <span className="font-bold text-gray-900 text-lg">${item.product.gia * item.quantity}</span>
                       </div>
                     </div>
                   </div>

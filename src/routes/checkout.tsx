@@ -115,10 +115,10 @@ function CheckoutPage() {
                 <h3 className="font-display text-lg font-bold text-gray-900 mb-4">Đơn Hàng</h3>
                 <div className="space-y-3 max-h-60 overflow-y-auto">
                   {items.map((item) => (
-                    <div key={item.product.id} className="flex items-center gap-3">
-                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0"><img src={item.product.image} alt="" className="w-full h-full object-cover" /></div>
-                      <div className="flex-1 min-w-0"><p className="text-sm font-medium text-gray-900 truncate">{item.product.name}</p><p className="text-xs text-gray-500">{item.size} × {item.quantity}</p></div>
-                      <span className="text-sm font-semibold">${item.product.price * item.quantity}</span>
+                    <div key={item.product.maSanPham} className="flex items-center gap-3">
+                      <div className="w-14 h-14 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0"><img src={item.product.hinhAnh || ""} alt="" className="w-full h-full object-cover" /></div>
+                      <div className="flex-1 min-w-0"><p className="text-sm font-medium text-gray-900 truncate">{item.product.tenSP}</p><p className="text-xs text-gray-500">{item.size} × {item.quantity}</p></div>
+                      <span className="text-sm font-semibold">${item.product.gia * item.quantity}</span>
                     </div>
                   ))}
                 </div>

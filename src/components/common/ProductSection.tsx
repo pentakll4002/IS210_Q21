@@ -1,12 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import { ProductCard } from "@/components/common/ProductCard";
-import type { Product } from "@/data/products";
+import type { SanPham } from "@/services/products";
 import { ArrowRight } from "lucide-react";
 
 interface ProductSectionProps {
   id: string;
   title: string;
-  products: Product[];
+  products: SanPham[];
 }
 
 export function ProductSection({ id, title, products }: ProductSectionProps) {
@@ -24,7 +24,7 @@ export function ProductSection({ id, title, products }: ProductSectionProps) {
         </div>
         <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:gap-8 md:grid-cols-3 lg:grid-cols-4">
           {products.map((product, index) => (
-            <Link key={product.id} to="/product/$id" params={{ id: String(product.id) }} className="block">
+            <Link key={product.maSanPham} to="/product/$id" params={{ id: product.maSanPham }} className="block">
               <ProductCard product={product} index={index} />
             </Link>
           ))}

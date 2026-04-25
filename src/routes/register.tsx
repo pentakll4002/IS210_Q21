@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Loader2 } from "lucide-react";
 
 export const Route = createFileRoute("/register")({ component: RegisterPage });
 
 function RegisterPage() {
-  const { register, isAuthenticated } = useAuth();
+  const { register, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -16,11 +16,12 @@ function RegisterPage() {
 
   if (isAuthenticated) { navigate({ to: "/" }); return null; }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
     if (!name || !email || !password) { setError("Vui lòng điền đầy đủ thông tin"); return; }
     if (password.length < 6) { setError("Mật khẩu phải chứa ít nhất 6 ký tự"); return; }
-    const ok = register(name, email, password);
+    const ok = await register(name, email, password);
     if (ok) navigate({ to: "/" }); else setError("Email đã tồn tại");
   };
 
@@ -75,8 +76,8 @@ function RegisterPage() {
               <input type="checkbox" className="rounded border-gray-300 accent-gray-900 mt-0.5" />
               Tôi đồng ý với <a href="#" className="text-gray-900 font-medium underline">Điều Khoản Dịch Vụ</a> và <a href="#" className="text-gray-900 font-medium underline">Chính Sách Bảo Mật</a>
             </label>
-            <button type="submit" className="w-full h-12 rounded-xl bg-gray-900 text-white font-semibold text-sm hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/20 flex items-center justify-center gap-2 group">
-              Tạo Tài Khoản <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
+            <button type="submit" disabled={loading} className="w-full h-12 rounded-xl bg-gray-900 text-white font-semibold text-sm hover:bg-gray-800 transition-all shadow-lg shadow-gray-900/20 flex items-center justify-center gap-2 group disabled:opacity-60">
+              {loading ? <><Loader2 className="h-4 w-4 animate-spin" /> Đang xử lý...</> : <>Tạo Tài Khoản <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" /></>}
             </button>
           </form>
 

@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, ReactNode } from "react";
+import { authService, type NguoiDung } from "@/services/auth";
 
 interface User {
   id: string;
@@ -7,65 +8,94 @@ interface User {
   avatar?: string;
   phone?: string;
   address?: string;
+  role?: string;
 }
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string) => boolean;
-  register: (name: string, email: string, password: string) => boolean;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  updateProfile: (data: Partial<User>) => void;
+  updateProfile: (data: Partial<User>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
+function mapUser(nd: NguoiDung): User {
+  return {
+    id: nd.maNguoiDung,
+    name: nd.tenND,
+    email: nd.email,
+    phone: nd.soDienThoai ?? undefined,
+    address: nd.diaChi ?? undefined,
+    role: nd.vaiTro,
+  };
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
     const saved = localStorage.getItem("sneaksurf_user");
-    return saved ? JSON.parse(saved) : null;
+    if (!saved) return null;
+    try {
+      const nd = JSON.parse(saved);
+      // Support both old format {id,name,email} and new API format {maNguoiDung,...}
+      if (nd.maNguoiDung) return mapUser(nd);
+      return nd;
+    } catch { return null; }
   });
+  const [loading, setLoading] = useState(false);
 
-  const login = (email: string, _password: string): boolean => {
-    const users = JSON.parse(localStorage.getItem("sneaksurf_users") || "[]");
-    const found = users.find((u: any) => u.email === email);
-    if (found) {
-      setUser(found);
-      localStorage.setItem("sneaksurf_user", JSON.stringify(found));
+  const login = async (email: string, password: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      const { nguoiDung } = await authService.login(email, password);
+      const u = mapUser(nguoiDung);
+      setUser(u);
       return true;
+    } catch {
+      return false;
+    } finally {
+      setLoading(false);
     }
-    // Demo: allow any login
-    const demoUser: User = { id: Date.now().toString(), name: email.split("@")[0], email };
-    setUser(demoUser);
-    localStorage.setItem("sneaksurf_user", JSON.stringify(demoUser));
-    return true;
   };
 
-  const register = (name: string, email: string, _password: string): boolean => {
-    const users = JSON.parse(localStorage.getItem("sneaksurf_users") || "[]");
-    if (users.find((u: any) => u.email === email)) return false;
-    const newUser: User = { id: Date.now().toString(), name, email };
-    users.push(newUser);
-    localStorage.setItem("sneaksurf_users", JSON.stringify(users));
-    setUser(newUser);
-    localStorage.setItem("sneaksurf_user", JSON.stringify(newUser));
-    return true;
+  const register = async (name: string, email: string, password: string): Promise<boolean> => {
+    setLoading(true);
+    try {
+      const { nguoiDung } = await authService.register(name, email, password);
+      const u = mapUser(nguoiDung);
+      setUser(u);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      setLoading(false);
+    }
   };
 
   const logout = () => {
+    authService.logout();
     setUser(null);
-    localStorage.removeItem("sneaksurf_user");
   };
 
-  const updateProfile = (data: Partial<User>) => {
-    if (!user) return;
-    const updated = { ...user, ...data };
-    setUser(updated);
-    localStorage.setItem("sneaksurf_user", JSON.stringify(updated));
+  const updateProfile = async (data: Partial<User>) => {
+    try {
+      const nd = await authService.updateProfile({
+        tenND: data.name,
+        soDienThoai: data.phone,
+        diaChi: data.address,
+      });
+      const u = mapUser(nd);
+      setUser(u);
+    } catch (err) {
+      console.error("Update profile failed:", err);
+    }
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, register, logout, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

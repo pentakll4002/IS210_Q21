@@ -3,30 +3,70 @@ import { AnnouncementBar } from "@/components/common/AnnouncementBar";
 import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
 import { ProductCard } from "@/components/common/ProductCard";
-import { products } from "@/data/products";
-import { useState } from "react";
-import { SlidersHorizontal, Grid3X3, LayoutList, Search } from "lucide-react";
+import { productsService, type SanPham } from "@/services/products";
+import { danhMucService, thuongHieuService, type DanhMuc, type ThuongHieu } from "@/services/cart";
+import { useState, useEffect } from "react";
+import { Search, Loader2, Database } from "lucide-react";
+
+
 
 export const Route = createFileRoute("/products")({ component: ProductsPage });
 
 function ProductsPage() {
+  const [products, setProducts] = useState<SanPham[]>([]);
+  const [categories, setCategories] = useState<DanhMuc[]>([]);
+  const [brands, setBrands] = useState<ThuongHieu[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fromDb, setFromDb] = useState(false);
+
   const [filter, setFilter] = useState("all");
+  const [brandFilter, setBrandFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("default");
 
-  const categories = [
-    { id: "all", label: "Tất Cả" },
-    { id: "hang-moi-ve", label: "Hàng Mới Về" },
-    { id: "ban-chay", label: "Bán Chạy Nhất" },
-    { id: "sneaker", label: "Giày Sneaker" },
-    { id: "quan-ao", label: "Quần Áo" },
-  ];
+  useEffect(() => {
+    const fetchAll = async () => {
+      try {
+        const [prodRes, catRes, brandRes] = await Promise.all([
+          productsService.getAll({ soLuong: 50 }),
+          danhMucService.getAll(),
+          thuongHieuService.getAll(),
+        ]);
+        if (prodRes.danhSach?.length > 0) {
+          setProducts(prodRes.danhSach);
+          setFromDb(true);
+        }
+        if (catRes?.length > 0) setCategories(catRes);
+        if (brandRes?.length > 0) setBrands(brandRes);
+      } catch {
+        // Fallback to static
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
+  }, []);
 
-  let filtered = filter === "all" ? products : products.filter((p) => p.category === filter);
-  if (search) filtered = filtered.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()) || p.brand.toLowerCase().includes(search.toLowerCase()));
-  if (sort === "price-asc") filtered = [...filtered].sort((a, b) => a.price - b.price);
-  if (sort === "price-desc") filtered = [...filtered].sort((a, b) => b.price - a.price);
-  if (sort === "name") filtered = [...filtered].sort((a, b) => a.name.localeCompare(b.name));
+  const allCategories = categories.length > 0
+    ? [{ id: "all", label: "Tất Cả" }, ...categories.map(c => ({ id: c.maDanhMuc, label: c.tenDM }))]
+    : [
+      { id: "all", label: "Tất Cả" },
+      { id: "hang-moi-ve", label: "Hàng Mới Về" },
+      { id: "ban-chay", label: "Bán Chạy Nhất" },
+      { id: "sneaker", label: "Giày Sneaker" },
+      { id: "quan-ao", label: "Quần Áo" },
+    ];
+
+  let filtered = filter === "all" ? products : products.filter((p) => p.maDanhMuc === filter);
+
+  if (brandFilter !== "all") {
+    filtered = filtered.filter((p) => p.thuongHieu?.tenTH === brandFilter);
+  }
+
+  if (search) filtered = filtered.filter((p) => p.tenSP.toLowerCase().includes(search.toLowerCase()) || (p.thuongHieu?.tenTH || "").toLowerCase().includes(search.toLowerCase()));
+  if (sort === "price-asc") filtered = [...filtered].sort((a, b) => a.gia - b.gia);
+  if (sort === "price-desc") filtered = [...filtered].sort((a, b) => b.gia - a.gia);
+  if (sort === "name") filtered = [...filtered].sort((a, b) => a.tenSP.localeCompare(b.tenSP));
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -36,7 +76,14 @@ function ProductsPage() {
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
             <div>
               <h1 className="font-display text-3xl md:text-4xl font-bold text-gray-900">Tất Cả Sản Phẩm</h1>
-              <p className="text-sm text-gray-500 mt-1">Tìm thấy {filtered.length} sản phẩm</p>
+              <div className="flex items-center gap-2 mt-1">
+                <p className="text-sm text-gray-500">Tìm thấy {filtered.length} sản phẩm</p>
+                {fromDb && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold">
+                    <Database className="h-3 w-3" /> Oracle DB
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="relative">
@@ -55,8 +102,8 @@ function ProductsPage() {
           </div>
 
           {/* Category filters */}
-          <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
-            {categories.map((cat) => (
+          <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
+            {allCategories.map((cat) => (
               <button key={cat.id} onClick={() => setFilter(cat.id)}
                 className={`flex-shrink-0 px-5 py-2.5 rounded-full text-sm font-medium transition-all duration-300 ${filter === cat.id ? 'bg-gray-900 text-white shadow-lg' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
                 {cat.label}
@@ -64,8 +111,30 @@ function ProductsPage() {
             ))}
           </div>
 
+          {/* Brand filters */}
+          {brands.length > 0 && (
+            <div className="flex items-center gap-2 mb-8 overflow-x-auto pb-2">
+              <span className="text-xs font-bold text-gray-400 uppercase tracking-wider mr-1">Thương hiệu:</span>
+              <button onClick={() => setBrandFilter("all")}
+                className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${brandFilter === "all" ? 'bg-orange-500 text-white' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}>
+                Tất cả
+              </button>
+              {brands.map((b) => (
+                <button key={b.maThuongHieu} onClick={() => setBrandFilter(b.tenTH)}
+                  className={`flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${brandFilter === b.tenTH ? 'bg-orange-500 text-white' : 'bg-orange-50 text-orange-600 hover:bg-orange-100'}`}>
+                  {b.tenTH}
+                </button>
+              ))}
+            </div>
+          )}
+
           {/* Products grid */}
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="text-center py-20">
+              <Loader2 className="h-8 w-8 animate-spin mx-auto text-gray-400 mb-4" />
+              <p className="text-gray-500">Đang tải sản phẩm từ Oracle...</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <div className="text-center py-20">
               <h3 className="font-display text-xl font-bold text-gray-900">Không tìm thấy sản phẩm</h3>
               <p className="mt-2 text-gray-500 text-sm">Vui lòng thử điều chỉnh bộ lọc hoặc từ khóa tìm kiếm.</p>
@@ -73,7 +142,7 @@ function ProductsPage() {
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:gap-6 lg:gap-8 md:grid-cols-3 lg:grid-cols-4">
               {filtered.map((product, index) => (
-                <Link key={product.id} to="/product/$id" params={{ id: String(product.id) }} className="block">
+                <Link key={product.maSanPham} to="/product/$id" params={{ id: product.maSanPham }} className="block">
                   <ProductCard product={product} index={index} />
                 </Link>
               ))}
