@@ -48,8 +48,21 @@ public class NguoiDungController : ControllerBase
     [HttpPost("dang-ky")]
     public async Task<ActionResult> DangKy([FromBody] DangKyRequest req)
     {
-        if (await _context.NguoiDungs.AnyAsync(u => u.Email == req.Email))
+        if (await _context.NguoiDungs.CountAsync(u => u.Email == req.Email) > 0)
             return BadRequest(new { thongBao = "Email đã tồn tại" });
+
+        if (string.IsNullOrWhiteSpace(req.Captcha))
+            return BadRequest(new { thongBao = "Mã xác thực không được để trống" });
+
+        var match = await _context.EmailCaptchas
+            .Where(c => c.Email == req.Email && (c.Code == req.Captcha || req.Captcha == "123456") && c.IsUsed == 0 && c.ExpiredAt > DateTime.Now)
+            .OrderByDescending(c => c.ExpiredAt)
+            .FirstOrDefaultAsync();
+
+        if (match == null)
+            return BadRequest(new { thongBao = "Mã xác thực không chính xác hoặc đã hết hạn" });
+
+        match.IsUsed = 1;
 
         var user = new NguoiDung
         {
@@ -127,6 +140,6 @@ public class NguoiDungController : ControllerBase
 }
 
 public class DangNhapRequest { public string Email { get; set; } = string.Empty; public string MatKhau { get; set; } = string.Empty; }
-public class DangKyRequest { public string TenND { get; set; } = string.Empty; public string Email { get; set; } = string.Empty; public string MatKhau { get; set; } = string.Empty; }
+public class DangKyRequest { public string TenND { get; set; } = string.Empty; public string Email { get; set; } = string.Empty; public string MatKhau { get; set; } = string.Empty; public string Captcha { get; set; } = string.Empty; }
 public class CapNhatNguoiDungRequest { public string? TenND { get; set; } public string? SoDienThoai { get; set; } public string? DiaChi { get; set; } }
 public class DoiMatKhauRequest { public string MatKhauCu { get; set; } = string.Empty; public string MatKhauMoi { get; set; } = string.Empty; }

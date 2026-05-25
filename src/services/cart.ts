@@ -1,5 +1,5 @@
-import api from './api';
-import type { SanPham } from './products';
+import api from "./api";
+import type { SanPham } from "./products";
 
 // ===== GIỎ HÀNG (Server-side) =====
 export interface CartItemServer {
@@ -7,16 +7,29 @@ export interface CartItemServer {
   maSanPham: string;
   kichCo: string;
   soLuong: number;
-  sanPham?: { maSanPham: string; tenSP: string; gia: number; giaGoc: number | null; hinhAnh: string | null; soLuong: number };
+  sanPham?: {
+    maSanPham: string;
+    tenSP: string;
+    gia: number;
+    giaGoc: number | null;
+    hinhAnh: string | null;
+    soLuong: number;
+  };
 }
 
 export const gioHangService = {
   getCart: async () => {
-    const res = await api.get<{ maGioHang?: string; items: CartItemServer[] }>('/giohang');
+    const res = await api.get<{ maGioHang?: string; items: CartItemServer[] }>(
+      "/giohang",
+    );
     return res.data;
   },
-  addToCart: async (maSanPham: string, kichCo: string = 'US 9', soLuong: number = 1) => {
-    const res = await api.post('/giohang/them', { maSanPham, kichCo, soLuong });
+  addToCart: async (
+    maSanPham: string,
+    kichCo: string = "US 9",
+    soLuong: number = 1,
+  ) => {
+    const res = await api.post("/giohang/them", { maSanPham, kichCo, soLuong });
     return res.data;
   },
   updateItem: async (maCTGH: string, soLuong: number) => {
@@ -28,7 +41,7 @@ export const gioHangService = {
     return res.data;
   },
   clearCart: async () => {
-    const res = await api.delete('/giohang');
+    const res = await api.delete("/giohang");
     return res.data;
   },
 };
@@ -43,7 +56,7 @@ export interface DanhMuc {
 
 export const danhMucService = {
   getAll: async () => {
-    const res = await api.get<DanhMuc[]>('/danhmuc');
+    const res = await api.get<DanhMuc[]>("/danhmuc");
     return res.data;
   },
   getById: async (id: string) => {
@@ -64,7 +77,7 @@ export interface ThuongHieu {
 
 export const thuongHieuService = {
   getAll: async () => {
-    const res = await api.get<ThuongHieu[]>('/thuonghieu');
+    const res = await api.get<ThuongHieu[]>("/thuonghieu");
     return res.data;
   },
   getById: async (id: string) => {
@@ -86,11 +99,15 @@ export interface DanhGia {
 
 export const danhGiaService = {
   getBySanPham: async (maSanPham: string) => {
-    const res = await api.get('/danhgia', { params: { maSanPham } });
+    const res = await api.get("/danhgia", { params: { maSanPham } });
     return res.data;
   },
-  themDanhGia: async (data: { maSanPham: string; soSao: number; binhLuan?: string }) => {
-    const res = await api.post('/danhgia', data);
+  themDanhGia: async (data: {
+    maSanPham: string;
+    soSao: number;
+    binhLuan?: string;
+  }) => {
+    const res = await api.post("/danhgia", data);
     return res.data;
   },
 };
@@ -100,16 +117,22 @@ export interface SanPhamYeuThich {
   maSPYT: string;
   maSanPham: string;
   ngayThem: string;
-  sanPham?: { maSanPham: string; tenSP: string; gia: number; giaGoc: number | null; hinhAnh: string | null };
+  sanPham?: {
+    maSanPham: string;
+    tenSP: string;
+    gia: number;
+    giaGoc: number | null;
+    hinhAnh: string | null;
+  };
 }
 
 export const yeuThichService = {
   getAll: async () => {
-    const res = await api.get<SanPhamYeuThich[]>('/yeuthich');
+    const res = await api.get<SanPhamYeuThich[]>("/yeuthich");
     return res.data;
   },
   add: async (maSanPham: string) => {
-    const res = await api.post('/yeuthich', { maSanPham });
+    const res = await api.post("/yeuthich", { maSanPham });
     return res.data;
   },
   remove: async (maSanPham: string) => {
@@ -129,7 +152,7 @@ export interface ThongBao {
 
 export const thongBaoService = {
   getAll: async () => {
-    const res = await api.get<ThongBao[]>('/thongbao');
+    const res = await api.get<ThongBao[]>("/thongbao");
     return res.data;
   },
   markRead: async (id: string) => {
@@ -149,11 +172,11 @@ export interface DiaChiGiaoHang {
 
 export const diaChiService = {
   getAll: async () => {
-    const res = await api.get<DiaChiGiaoHang[]>('/diachi');
+    const res = await api.get<DiaChiGiaoHang[]>("/diachi");
     return res.data;
   },
-  add: async (data: Omit<DiaChiGiaoHang, 'maDCGH'>) => {
-    const res = await api.post('/diachi', data);
+  add: async (data: Omit<DiaChiGiaoHang, "maDCGH">) => {
+    const res = await api.post("/diachi", data);
     return res.data;
   },
   delete: async (id: string) => {
@@ -174,7 +197,7 @@ export interface KhuyenMai {
 
 export const khuyenMaiService = {
   getAll: async () => {
-    const res = await api.get<KhuyenMai[]>('/khuyenmai');
+    const res = await api.get<KhuyenMai[]>("/khuyenmai");
     return res.data;
   },
 };
@@ -191,7 +214,7 @@ export interface VoucherInfo {
 
 export const voucherService = {
   getAll: async () => {
-    const res = await api.get<VoucherInfo[]>('/voucher');
+    const res = await api.get<VoucherInfo[]>("/voucher");
     return res.data;
   },
   check: async (maVoucher: string) => {

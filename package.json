@@ -4,8 +4,10 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
+    "predev": "powershell -Command \"try { $p = Get-NetTCPConnection -LocalPort 5000 -ErrorAction Stop; Stop-Process -Id $p.OwningProcess -Force } catch {}; exit 0\"",
     "dev": "concurrently \"dotnet watch --project backend/SneakerShop.API.csproj --launch-profile http\" \"vite dev\"",
     "dev:frontend": "vite dev",
+    "predev:backend": "powershell -Command \"try { $p = Get-NetTCPConnection -LocalPort 5000 -ErrorAction Stop; Stop-Process -Id $p.OwningProcess -Force } catch {}; exit 0\"",
     "dev:backend": "dotnet watch --project backend/SneakerShop.API.csproj --launch-profile http",
     "build": "vite build",
     "build:dev": "vite build --mode development",

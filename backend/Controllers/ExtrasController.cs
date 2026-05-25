@@ -31,7 +31,7 @@ public class YeuThichController : ControllerBase
     {
         var userId = GetUserId(Authorization);
         if (userId == null) return Unauthorized();
-        if (await _context.SanPhamYeuThichs.AnyAsync(s => s.MaNguoiDung == userId && s.MaSanPham == req.MaSanPham))
+        if (await _context.SanPhamYeuThichs.CountAsync(s => s.MaNguoiDung == userId && s.MaSanPham == req.MaSanPham) > 0)
             return BadRequest(new { thongBao = "Đã có trong danh sách yêu thích" });
         _context.SanPhamYeuThichs.Add(new SanPhamYeuThich { MaSPYT = _context.NextSPYTId(), MaNguoiDung = userId, MaSanPham = req.MaSanPham });
         await _context.SaveChangesAsync();

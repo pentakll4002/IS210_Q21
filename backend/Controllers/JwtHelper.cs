@@ -55,4 +55,32 @@ public static class JwtHelper
             return null;
         }
     }
+
+    public static bool IsAdmin(string? authorization, string key)
+    {
+        if (string.IsNullOrEmpty(authorization) || !authorization.StartsWith("Bearer "))
+            return false;
+
+        var token = authorization["Bearer ".Length..].Trim();
+        try
+        {
+            var handler = new JwtSecurityTokenHandler();
+            var parameters = new TokenValidationParameters
+            {
+                ValidateIssuerSigningKey = true,
+                IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(key)),
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero,
+            };
+
+            var principal = handler.ValidateToken(token, parameters, out _);
+            var role = principal.FindFirst(ClaimTypes.Role)?.Value;
+            return role == "ADMIN";
+        }
+        catch
+        {
+            return false;
+        }
+    }
 }

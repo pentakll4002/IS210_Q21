@@ -1,5 +1,5 @@
-import api from './api';
-import type { SanPham } from './products';
+import api from "./api";
+import type { SanPham } from "./products";
 
 export interface ChiTietDonHang {
   maChiTiet: string;
@@ -37,7 +37,7 @@ export interface DatHangRequest {
 
 export const ordersService = {
   getOrders: async () => {
-    const response = await api.get<DonHang[]>('/donhang');
+    const response = await api.get<DonHang[]>("/donhang");
     return response.data;
   },
 
@@ -47,7 +47,7 @@ export const ordersService = {
   },
 
   datHang: async (data: DatHangRequest) => {
-    const response = await api.post('/donhang/dat-hang', data);
+    const response = await api.post("/donhang/dat-hang", data);
     return response.data;
   },
 
@@ -56,8 +56,10 @@ export const ordersService = {
     return response.data;
   },
 
-  thanhToan: async (id: string, phuongThuc: string = 'COD') => {
-    const response = await api.post(`/donhang/${id}/thanh-toan`, { phuongThuc });
+  thanhToan: async (id: string, phuongThuc: string = "COD") => {
+    const response = await api.post(`/donhang/${id}/thanh-toan`, {
+      phuongThuc,
+    });
     return response.data;
   },
 };

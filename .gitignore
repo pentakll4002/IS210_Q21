@@ -27,3 +27,8 @@ dist-ssr
 backend/bin/
 backend/obj/
 *.db
+
+.env
+
+__pycache__
+.claude

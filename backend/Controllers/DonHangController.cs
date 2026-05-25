@@ -193,6 +193,44 @@ public class DonHangController : ControllerBase
 
         return Ok(new { thanhToan.MaThanhToan, thanhToan.PhuongThuc, thanhToan.SoTien, thanhToan.TrangThai, thongBao = "Thanh toán thành công!" });
     }
+
+    // GET /api/donhang/admin/all - Admin lấy tất cả đơn hàng hệ thống
+    [HttpGet("admin/all")]
+    public async Task<ActionResult> GetAdminAll([FromHeader] string Authorization)
+    {
+        var is_admin = JwtHelper.IsAdmin(Authorization, _config["Jwt:Key"] ?? "SneakerShopSecretKey2024MinLength32Chars!");
+        if (!is_admin) return Forbid();
+
+        var donHangs = await _context.DonHangs
+            .Include(dh => dh.ChiTietDonHangs)
+                .ThenInclude(ct => ct.SanPham)
+            .OrderByDescending(dh => dh.NgayDat)
+            .ToListAsync();
+
+        return Ok(donHangs);
+    }
+
+    // PUT /api/donhang/admin/{id}/status - Admin cập nhật trạng thái đơn hàng bất kỳ
+    [HttpPut("admin/{id}/status")]
+    public async Task<ActionResult> UpdateOrderStatus(string id, [FromBody] UpdateOrderStatusRequest req, [FromHeader] string Authorization)
+    {
+        var is_admin = JwtHelper.IsAdmin(Authorization, _config["Jwt:Key"] ?? "SneakerShopSecretKey2024MinLength32Chars!");
+        if (!is_admin) return Forbid();
+
+        var donHang = await _context.DonHangs.FindAsync(id);
+        if (donHang == null) return NotFound();
+
+        donHang.TrangThai = req.TrangThai;
+        donHang.NgayCapNhat = DateTime.UtcNow;
+
+        await _context.SaveChangesAsync();
+        return Ok(new { thongBao = "Cập nhật trạng thái đơn hàng thành công", donHang });
+    }
+}
+
+public class UpdateOrderStatusRequest
+{
+    public string TrangThai { get; set; } = "DANGXULY";
 }
 
 public class DatHangRequest

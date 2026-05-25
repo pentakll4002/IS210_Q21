@@ -16,7 +16,7 @@ interface AuthContextType {
   isAuthenticated: boolean;
   loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
-  register: (name: string, email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, captcha: string) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;
 }
@@ -43,7 +43,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Support both old format {id,name,email} and new API format {maNguoiDung,...}
       if (nd.maNguoiDung) return mapUser(nd);
       return nd;
-    } catch { return null; }
+    } catch {
+      return null;
+    }
   });
   const [loading, setLoading] = useState(false);
 
@@ -61,10 +63,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const register = async (name: string, email: string, password: string): Promise<boolean> => {
+  const register = async (
+    name: string,
+    email: string,
+    password: string,
+    captcha: string,
+  ): Promise<boolean> => {
     setLoading(true);
     try {
-      const { nguoiDung } = await authService.register(name, email, password);
+      const { nguoiDung } = await authService.register(name, email, password, captcha);
       const u = mapUser(nguoiDung);
       setUser(u);
       return true;
@@ -95,7 +102,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, register, logout, updateProfile }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        loading,
+        login,
+        register,
+        logout,
+        updateProfile,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

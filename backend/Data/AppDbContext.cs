@@ -1,5 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using SneakerShop.API.Models;
+using System.Reflection;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace SneakerShop.API.Data;
 
@@ -29,6 +31,7 @@ public class AppDbContext : DbContext
     private static int _seqTB = 10;
     private static int _seqDCGH = 10;
     private static int _seqKC = 10;
+    private static int _seqEmailCaptcha = 1000;
 
     public AppDbContext(DbContextOptions<AppDbContext> options) : base(options) { }
 
@@ -58,6 +61,7 @@ public class AppDbContext : DbContext
     public DbSet<SanPhamYeuThich> SanPhamYeuThichs => Set<SanPhamYeuThich>();
     public DbSet<ThongBao> ThongBaos => Set<ThongBao>();
     public DbSet<DiaChiGiaoHang> DiaChiGiaoHangs => Set<DiaChiGiaoHang>();
+    public DbSet<EmailCaptcha> EmailCaptchas => Set<EmailCaptcha>();
 
     // ID generators
     public string NextNguoiDungId() => "ND" + Interlocked.Increment(ref _seqNguoiDung);
@@ -84,6 +88,279 @@ public class AppDbContext : DbContext
     public string NextTBId() => "TB" + Interlocked.Increment(ref _seqTB);
     public string NextDCGHId() => "DC" + Interlocked.Increment(ref _seqDCGH);
     public string NextKCId() => "KC" + Interlocked.Increment(ref _seqKC);
+    public string NextEmailCaptchaId() => "CP" + Interlocked.Increment(ref _seqEmailCaptcha);
+
+    public static void InitializeSequences(AppDbContext db)
+    {
+        // 1. Ensure EMAILCAPTCHA table exists in Oracle
+        try
+        {
+            db.Database.ExecuteSqlRaw(@"
+                DECLARE
+                    cnt NUMBER;
+                BEGIN
+                    SELECT count(*) INTO cnt FROM user_tables WHERE table_name = 'EMAILCAPTCHA';
+                    IF cnt = 0 THEN
+                        EXECUTE IMMEDIATE 'CREATE TABLE EMAILCAPTCHA (
+                            MACAPTCHA VARCHAR2(10) PRIMARY KEY,
+                            EMAIL VARCHAR2(100) NOT NULL,
+                            CODE VARCHAR2(10) NOT NULL,
+                            EXPIREDAT TIMESTAMP NOT NULL,
+                            ISUSED NUMBER(10) NOT NULL
+                        )';
+                    END IF;
+                END;
+            ");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Warning: EMAILCAPTCHA table check/creation failed: " + ex.Message);
+        }
+
+        // 2. Clear out demo/test users created during registration tests
+        try
+        {
+            var demoUsers = db.NguoiDungs.Where(u => u.Email.EndsWith("@example.com") || u.TenND.Contains("Test") || u.TenND.Contains("test")).ToList();
+            if (demoUsers.Any())
+            {
+                db.NguoiDungs.RemoveRange(demoUsers);
+                db.SaveChanges();
+                Console.WriteLine($"[AppDbContext] Cleared {demoUsers.Count} demo/test users.");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Warning: Failed to delete demo users: " + ex.Message);
+        }
+
+        try
+        {
+            var userIds = db.NguoiDungs.Select(u => u.MaNguoiDung).AsNoTracking().ToList();
+            if (userIds.Any())
+            {
+                var nums = userIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqNguoiDung = Math.Max(_seqNguoiDung, nums.Max());
+            }
+
+            var dmIds = db.DanhMucs.Select(d => d.MaDanhMuc).AsNoTracking().ToList();
+            if (dmIds.Any())
+            {
+                var nums = dmIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqDanhMuc = Math.Max(_seqDanhMuc, nums.Max());
+            }
+
+            var thIds = db.ThuongHieus.Select(t => t.MaThuongHieu).AsNoTracking().ToList();
+            if (thIds.Any())
+            {
+                var nums = thIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqThuongHieu = Math.Max(_seqThuongHieu, nums.Max());
+            }
+
+            var spIds = db.SanPhams.Select(s => s.MaSanPham).AsNoTracking().ToList();
+            if (spIds.Any())
+            {
+                var nums = spIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqSanPham = Math.Max(_seqSanPham, nums.Max());
+            }
+
+            var dhIds = db.DonHangs.Select(d => d.MaDonHang).AsNoTracking().ToList();
+            if (dhIds.Any())
+            {
+                var nums = dhIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqDonHang = Math.Max(_seqDonHang, nums.Max());
+            }
+
+            var ctIds = db.ChiTietDonHangs.Select(c => c.MaChiTiet).AsNoTracking().ToList();
+            if (ctIds.Any())
+            {
+                var nums = ctIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqChiTiet = Math.Max(_seqChiTiet, nums.Max());
+            }
+
+            var ttIds = db.ThanhToans.Select(t => t.MaThanhToan).AsNoTracking().ToList();
+            if (ttIds.Any())
+            {
+                var nums = ttIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqThanhToan = Math.Max(_seqThanhToan, nums.Max());
+            }
+
+            var dgIds = db.DanhGias.Select(d => d.MaDanhGia).AsNoTracking().ToList();
+            if (dgIds.Any())
+            {
+                var nums = dgIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqDanhGia = Math.Max(_seqDanhGia, nums.Max());
+            }
+
+            var ghIds = db.GioHangs.Select(g => g.MaGioHang).AsNoTracking().ToList();
+            if (ghIds.Any())
+            {
+                var nums = ghIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqGioHang = Math.Max(_seqGioHang, nums.Max());
+            }
+
+            var ctghIds = db.ChiTietGioHangs.Select(c => c.MaCTGH).AsNoTracking().ToList();
+            if (ctghIds.Any())
+            {
+                var nums = ctghIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqCTGH = Math.Max(_seqCTGH, nums.Max());
+            }
+
+            var kmIds = db.KhuyenMais.Select(k => k.MaKhuyenMai).AsNoTracking().ToList();
+            if (kmIds.Any())
+            {
+                var nums = kmIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqKhuyenMai = Math.Max(_seqKhuyenMai, nums.Max());
+            }
+
+            var spkmIds = db.SanPhamKhuyenMais.Select(s => s.MaSPKM).AsNoTracking().ToList();
+            if (spkmIds.Any())
+            {
+                var nums = spkmIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqSPKM = Math.Max(_seqSPKM, nums.Max());
+            }
+
+            var vndIds = db.VoucherNguoiDungs.Select(v => v.MaVND).AsNoTracking().ToList();
+            if (vndIds.Any())
+            {
+                var nums = vndIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqVND = Math.Max(_seqVND, nums.Max());
+            }
+
+            var tinTucIds = db.TinTucs.Select(t => t.MaTinTuc).AsNoTracking().ToList();
+            if (tinTucIds.Any())
+            {
+                var nums = tinTucIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqTinTuc = Math.Max(_seqTinTuc, nums.Max());
+            }
+
+            var blIds = db.BinhLuanTinTucs.Select(b => b.MaBLTT).AsNoTracking().ToList();
+            if (blIds.Any())
+            {
+                var nums = blIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqBLTT = Math.Max(_seqBLTT, nums.Max());
+            }
+
+            var lhIds = db.LienHes.Select(l => l.MaLienHe).AsNoTracking().ToList();
+            if (lhIds.Any())
+            {
+                var nums = lhIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqLienHe = Math.Max(_seqLienHe, nums.Max());
+            }
+
+            var nccIds = db.NhaCungCaps.Select(n => n.MaNCC).AsNoTracking().ToList();
+            if (nccIds.Any())
+            {
+                var nums = nccIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqNCC = Math.Max(_seqNCC, nums.Max());
+            }
+
+            var pnIds = db.PhieuNhaps.Select(p => p.MaPN).AsNoTracking().ToList();
+            if (pnIds.Any())
+            {
+                var nums = pnIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqPN = Math.Max(_seqPN, nums.Max());
+            }
+
+            var ctpnIds = db.ChiTietPhieuNhaps.Select(c => c.MaCTPN).AsNoTracking().ToList();
+            if (ctpnIds.Any())
+            {
+                var nums = ctpnIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqCTPN = Math.Max(_seqCTPN, nums.Max());
+            }
+
+            var lsIds = db.LichSuTimKiems.Select(l => l.MaLSTK).AsNoTracking().ToList();
+            if (lsIds.Any())
+            {
+                var nums = lsIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqLSTK = Math.Max(_seqLSTK, nums.Max());
+            }
+
+            var ytIds = db.SanPhamYeuThichs.Select(s => s.MaSPYT).AsNoTracking().ToList();
+            if (ytIds.Any())
+            {
+                var nums = ytIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqSPYT = Math.Max(_seqSPYT, nums.Max());
+            }
+
+            var tbIds = db.ThongBaos.Select(t => t.MaTB).AsNoTracking().ToList();
+            if (tbIds.Any())
+            {
+                var nums = tbIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqTB = Math.Max(_seqTB, nums.Max());
+            }
+
+            var dcIds = db.DiaChiGiaoHangs.Select(d => d.MaDCGH).AsNoTracking().ToList();
+            if (dcIds.Any())
+            {
+                var nums = dcIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqDCGH = Math.Max(_seqDCGH, nums.Max());
+            }
+
+            var kcIds = db.KichCoSanPhams.Select(k => k.MaKichCo).AsNoTracking().ToList();
+            if (kcIds.Any())
+            {
+                var nums = kcIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                _seqKC = Math.Max(_seqKC, nums.Max());
+            }
+
+            try
+            {
+                var captchaIds = db.EmailCaptchas.Select(c => c.MaCaptcha).AsNoTracking().ToList();
+                if (captchaIds.Any())
+                {
+                    var nums = captchaIds.Select(id => id.Length > 2 && int.TryParse(id.Substring(2), out var v) ? v : 0);
+                    _seqEmailCaptcha = Math.Max(_seqEmailCaptcha, nums.Max());
+                }
+            }
+            catch { /* If table just got created or not indexed yet */ }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AppDbContext] Warning: Could not initialize sequences: {ex.Message}");
+        }
+    }
+
+    public static void FixCategoryNames(AppDbContext db)
+    {
+        try
+        {
+            var dm1 = db.DanhMucs.Find("DM1");
+            if (dm1 != null && (dm1.TenDM.Contains("HÃ") || dm1.TenDM.Contains("Mó") || dm1.TenDM.Contains("M\u009d")))
+            {
+                dm1.TenDM = "Hàng Mới Về";
+                dm1.MoTa = "Sản phẩm mới cập nhật";
+            }
+            var dm2 = db.DanhMucs.Find("DM2");
+            if (dm2 != null && (dm2.TenDM.Contains("BÃ") || dm2.TenDM.Contains("Ch\u00e1")))
+            {
+                dm2.TenDM = "Bán Chạy Nhất";
+                dm2.MoTa = "Sản phẩm bán chạy";
+            }
+            var dm3 = db.DanhMucs.Find("DM3");
+            if (dm3 != null && (dm3.TenDM.Contains("GiÃ") || dm3.TenDM.Contains("Sneaker")))
+            {
+                dm3.TenDM = "Giày Sneaker";
+                dm3.MoTa = "Giày sneaker các loại";
+            }
+            var dm4 = db.DanhMucs.Find("DM4");
+            if (dm4 != null && (dm4.TenDM.Contains("Quáº") || dm4.TenDM.Contains("Streetwear")))
+            {
+                dm4.TenDM = "Quần Áo Streetwear";
+                dm4.MoTa = "Thời trang đường phố";
+            }
+            var dm5 = db.DanhMucs.Find("DM5");
+            if (dm5 != null && (dm5.TenDM.Contains("Phá»") || dm5.TenDM.Contains("Ki\u00ea")))
+            {
+                dm5.TenDM = "Phụ Kiện";
+                dm5.MoTa = "Túi, mũ, tất";
+            }
+            db.SaveChanges();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[AppDbContext] Warning: Could not fix category names: {ex.Message}");
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -148,26 +425,26 @@ public class AppDbContext : DbContext
 
         // Seed: SanPham
         modelBuilder.Entity<SanPham>().HasData(
-            new SanPham { MaSanPham = "SP1001", TenSP = "Nike Air Jordan 1 Retro High OG Chicago", MaDanhMuc = "DM1", MaThuongHieu = "TH2", Gia = 259, HinhAnh = "https://images.unsplash.com/photo-1597045566677-8cf032ed6634?w=600&h=600&fit=crop", SoLuong = 50 },
-            new SanPham { MaSanPham = "SP1002", TenSP = "adidas Samba OG White Green", MaDanhMuc = "DM1", MaThuongHieu = "TH3", Gia = 159, GiaGoc = 189, HinhAnh = "https://images.unsplash.com/photo-1608231387042-66d6306a5933?w=600&h=600&fit=crop", SoLuong = 35 },
-            new SanPham { MaSanPham = "SP1003", TenSP = "New Balance 550 White Grey", MaDanhMuc = "DM1", MaThuongHieu = "TH4", Gia = 149, HinhAnh = "https://images.unsplash.com/photo-1539185441755-769473a23570?w=600&h=600&fit=crop", SoLuong = 40 },
-            new SanPham { MaSanPham = "SP1004", TenSP = "Nike Dunk Low Panda", MaDanhMuc = "DM1", MaThuongHieu = "TH1", Gia = 139, HinhAnh = "https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=600&h=600&fit=crop", SoLuong = 60 },
-            new SanPham { MaSanPham = "SP1005", TenSP = "Nike Air Max 90 Infrared", MaDanhMuc = "DM2", MaThuongHieu = "TH1", Gia = 229, HinhAnh = "https://images.unsplash.com/photo-1605348532760-6753d2c43329?w=600&h=600&fit=crop", SoLuong = 25 },
-            new SanPham { MaSanPham = "SP1006", TenSP = "Asics GEL-KAYANO 14", MaDanhMuc = "DM2", MaThuongHieu = "TH3", Gia = 189, HinhAnh = "https://images.unsplash.com/photo-1600185365926-3e5931e4e271?w=600&h=600&fit=crop", SoLuong = 30 },
-            new SanPham { MaSanPham = "SP1007", TenSP = "adidas Yeezy Boost 350 V2", MaDanhMuc = "DM2", MaThuongHieu = "TH3", Gia = 299, HinhAnh = "https://images.unsplash.com/photo-1587563871167-1ee9c731aefb?w=600&h=600&fit=crop", SoLuong = 10 },
-            new SanPham { MaSanPham = "SP1008", TenSP = "Nike Air Force 1 Triple White", MaDanhMuc = "DM2", MaThuongHieu = "TH1", Gia = 119, HinhAnh = "https://images.unsplash.com/photo-1549298916-b41d502d2e28?w=600&h=600&fit=crop", SoLuong = 80 },
-            new SanPham { MaSanPham = "SP1009", TenSP = "Jordan 4 Retro Military Black", MaDanhMuc = "DM3", MaThuongHieu = "TH2", Gia = 249, HinhAnh = "https://images.unsplash.com/photo-1584735175315-9d5df23860e6?w=600&h=600&fit=crop", SoLuong = 20 },
-            new SanPham { MaSanPham = "SP1010", TenSP = "Salomon XT-6 Black", MaDanhMuc = "DM3", MaThuongHieu = "TH3", Gia = 269, HinhAnh = "https://images.unsplash.com/photo-1551107696-a4b0c5a0d9a2?w=600&h=600&fit=crop", SoLuong = 15 },
-            new SanPham { MaSanPham = "SP1011", TenSP = "ON Cloudtilt Eclipse", MaDanhMuc = "DM3", MaThuongHieu = "TH3", Gia = 189, GiaGoc = 229, HinhAnh = "https://images.unsplash.com/photo-1542291026-7eec264fd278?w=600&h=600&fit=crop", SoLuong = 22 },
-            new SanPham { MaSanPham = "SP1012", TenSP = "Converse Chuck 70 High", MaDanhMuc = "DM3", MaThuongHieu = "TH5", Gia = 99, HinhAnh = "https://images.unsplash.com/photo-1607522370275-f14206abe5d3?w=600&h=600&fit=crop", SoLuong = 45 },
-            new SanPham { MaSanPham = "SP1013", TenSP = "Nike Tech Fleece Joggers", MaDanhMuc = "DM4", MaThuongHieu = "TH1", Gia = 119, HinhAnh = "https://images.unsplash.com/photo-1556906781-9a412961c42c?w=600&h=600&fit=crop", SoLuong = 55 },
-            new SanPham { MaSanPham = "SP1014", TenSP = "Stussy Basic Tee Black", MaDanhMuc = "DM4", MaThuongHieu = "TH3", Gia = 59, HinhAnh = "https://images.unsplash.com/photo-1521572163474-6864f9cf9ab1?w=600&h=600&fit=crop", SoLuong = 100 },
-            new SanPham { MaSanPham = "SP1015", TenSP = "Essentials Hoodie Oatmeal", MaDanhMuc = "DM4", MaThuongHieu = "TH3", Gia = 149, HinhAnh = "https://images.unsplash.com/photo-1578768079470-0a4536cc5e21?w=600&h=600&fit=crop", SoLuong = 30 },
-            new SanPham { MaSanPham = "SP1016", TenSP = "Carhartt Detroit Jacket", MaDanhMuc = "DM4", MaThuongHieu = "TH3", Gia = 199, HinhAnh = "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?w=600&h=600&fit=crop", SoLuong = 18 },
-            new SanPham { MaSanPham = "SP1017", TenSP = "Jordan 4 Thunder", MaDanhMuc = "DM3", MaThuongHieu = "TH2", Gia = 279, HinhAnh = "https://images.unsplash.com/photo-1597045566677-8cf032ed6634?w=600&h=600&fit=crop", SoLuong = 12 },
-            new SanPham { MaSanPham = "SP1018", TenSP = "adidas Forum Low", MaDanhMuc = "DM3", MaThuongHieu = "TH3", Gia = 109, GiaGoc = 129, HinhAnh = "https://images.unsplash.com/photo-1608231387042-66d6306a5933?w=600&h=600&fit=crop", SoLuong = 40 },
-            new SanPham { MaSanPham = "SP1019", TenSP = "Nike Blazer Mid 77", MaDanhMuc = "DM2", MaThuongHieu = "TH1", Gia = 109, HinhAnh = "https://images.unsplash.com/photo-1600269452121-4f2416e55c28?w=600&h=600&fit=crop", SoLuong = 0, TrangThai = "HETHANG" },
-            new SanPham { MaSanPham = "SP1020", TenSP = "New Balance 2002R", MaDanhMuc = "DM3", MaThuongHieu = "TH4", Gia = 179, GiaGoc = 199, HinhAnh = "https://images.unsplash.com/photo-1539185441755-769473a23570?w=600&h=600&fit=crop", SoLuong = 28 }
+            new SanPham { MaSanPham = "SP1001", TenSP = "Nike Air Jordan 1 Retro High OG Chicago", MaDanhMuc = "DM1", MaThuongHieu = "TH2", Gia = 259, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/4fde2cc9-99ff-469a-81b3-e74ffe5be20f/AIR+JORDAN+4+RETRO.png", SoLuong = 50 },
+            new SanPham { MaSanPham = "SP1002", TenSP = "adidas Samba OG White Green", MaDanhMuc = "DM1", MaThuongHieu = "TH3", Gia = 159, GiaGoc = 189, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/94ae4c48-4647-4eae-8301-6bd0b50ba81a/TENNIS+CLASSIC+CS+STYLE.png", SoLuong = 35 },
+            new SanPham { MaSanPham = "SP1003", TenSP = "New Balance 550 White Grey", MaDanhMuc = "DM1", MaThuongHieu = "TH4", Gia = 149, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/8b837a52-4418-43b1-9ec3-b865042a409b/TENNIS+CLASSIC+CS+PRM+%28TERRY%29.png", SoLuong = 40 },
+            new SanPham { MaSanPham = "SP1004", TenSP = "Nike Dunk Low Panda", MaDanhMuc = "DM1", MaThuongHieu = "TH1", Gia = 139, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/29ae8373-4463-48c7-9956-63300e6218c5/NIKE+DUNK+LOW.png", SoLuong = 60 },
+            new SanPham { MaSanPham = "SP1005", TenSP = "Nike Air Max 90 Infrared", MaDanhMuc = "DM2", MaThuongHieu = "TH1", Gia = 229, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/ca9fcdc0-a84e-478e-b370-2d396d50e369/AIR+MAX+95+BIG+BUBBLE.png", SoLuong = 25 },
+            new SanPham { MaSanPham = "SP1006", TenSP = "Asics GEL-KAYANO 14", MaDanhMuc = "DM2", MaThuongHieu = "TH3", Gia = 189, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/0bf16e28-22e6-4c40-bf76-b38a14b184f9/G.T.+CUT+4+VW.png", SoLuong = 30 },
+            new SanPham { MaSanPham = "SP1007", TenSP = "adidas Yeezy Boost 350 V2", MaDanhMuc = "DM2", MaThuongHieu = "TH3", Gia = 299, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/de772a38-6a2d-4a2d-a40f-9446a43a5f83/JA+3+KOOL+AID.png", SoLuong = 10 },
+            new SanPham { MaSanPham = "SP1008", TenSP = "Nike Air Force 1 Triple White", MaDanhMuc = "DM2", MaThuongHieu = "TH1", Gia = 119, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/857770a5-33de-4f3d-882d-8c2bc8234a79/AIR+FORCE+1+%2707.png", SoLuong = 80 },
+            new SanPham { MaSanPham = "SP1009", TenSP = "Jordan 4 Retro Military Black", MaDanhMuc = "DM3", MaThuongHieu = "TH2", Gia = 249, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/ba9c1273-c857-431c-8ec7-f97aa861ed69/AIR+JORDAN+1+RETRO+LOW+OG.png", SoLuong = 20 },
+            new SanPham { MaSanPham = "SP1010", TenSP = "Salomon XT-6 Black", MaDanhMuc = "DM3", MaThuongHieu = "TH3", Gia = 269, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/d6c5beef-1ed9-4b35-925f-6dc63b6ae69a/NIKE+ACG+ZEGAMA+TRAIL.png", SoLuong = 15 },
+            new SanPham { MaSanPham = "SP1011", TenSP = "ON Cloudtilt Eclipse", MaDanhMuc = "DM3", MaThuongHieu = "TH3", Gia = 189, GiaGoc = 229, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/f9a1f279-7cb2-4934-a325-b62a68269fc4/NIKE+PEGASUS+PREMIUM.png", SoLuong = 22 },
+            new SanPham { MaSanPham = "SP1012", TenSP = "Converse Chuck 70 High", MaDanhMuc = "DM3", MaThuongHieu = "TH5", Gia = 99, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/d0e0df7b-e2a0-4e04-aaed-59dacae250d4/NIKE+VOMERO+PREMIUM.png", SoLuong = 45 },
+            new SanPham { MaSanPham = "SP1013", TenSP = "Nike Tech Fleece Joggers", MaDanhMuc = "DM4", MaThuongHieu = "TH1", Gia = 119, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_126ab356-44d8-4a06-89b4-fcdcc8df0245,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/31313d8b-c313-4270-91d8-f03d8078f960/AIR+JORDAN+3+RETRO+OG.png", SoLuong = 55 },
+            new SanPham { MaSanPham = "SP1014", TenSP = "Stussy Basic Tee Black", MaDanhMuc = "DM4", MaThuongHieu = "TH3", Gia = 59, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/4c66c037-f50e-4de0-b7ae-39288003a0e0/NIKE+ACG+PEGASUS+TRAIL.png", SoLuong = 100 },
+            new SanPham { MaSanPham = "SP1015", TenSP = "Essentials Hoodie Oatmeal", MaDanhMuc = "DM4", MaThuongHieu = "TH3", Gia = 149, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/2d8b3ec5-9e42-463f-86c4-f110ee6d7ac8/AIR+MAX+95+BB+TECH.png", SoLuong = 30 },
+            new SanPham { MaSanPham = "SP1016", TenSP = "Carhartt Detroit Jacket", MaDanhMuc = "DM4", MaThuongHieu = "TH3", Gia = 199, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/37255fa7-9512-4e59-97fe-631af32c8056/NIKE+SHOX+R4+JEWEL+QS.png", SoLuong = 18 },
+            new SanPham { MaSanPham = "SP1017", TenSP = "Jordan 4 Thunder", MaDanhMuc = "DM3", MaThuongHieu = "TH2", Gia = 279, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/70d4e6c1-9d72-453f-9996-4017791e1f88/PHANTOM+6+HIGH+ELITE+FG+LV8.png", SoLuong = 12 },
+            new SanPham { MaSanPham = "SP1018", TenSP = "adidas Forum Low", MaDanhMuc = "DM3", MaThuongHieu = "TH3", Gia = 109, GiaGoc = 129, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/93a1bdf0-4400-4218-bc42-3a93389a4684/SABRINA+3++NRG.png", SoLuong = 40 },
+            new SanPham { MaSanPham = "SP1019", TenSP = "Nike Blazer Mid 77", MaDanhMuc = "DM2", MaThuongHieu = "TH1", Gia = 109, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/4c7f7ef9-0f0b-4e1c-96bd-12f0859042e6/LEBRON+XXIII.png", SoLuong = 0, TrangThai = "HETHANG" },
+            new SanPham { MaSanPham = "SP1020", TenSP = "New Balance 2002R", MaDanhMuc = "DM3", MaThuongHieu = "TH4", Gia = 179, GiaGoc = 199, HinhAnh = "https://static.nike.com/a/images/t_web_pw_592_v2/f_auto/u_9ddf04c7-2a9a-4d76-add1-d15af8f0263d,c_scale,fl_relative,w_1.0,h_1.0,fl_layer_apply/b596fa86-9e1f-4629-99a0-0f17b8b963d3/AIR+FORCE+1+%2707.png", SoLuong = 28 }
         );
 
         // Seed: DonHang
@@ -199,5 +476,59 @@ public class AppDbContext : DbContext
             new DanhGia { MaDanhGia = "DG2", MaSanPham = "SP1002", MaNguoiDung = "ND1002", SoSao = 4, BinhLuan = "Samba OG classic." },
             new DanhGia { MaDanhGia = "DG3", MaSanPham = "SP1005", MaNguoiDung = "ND1004", SoSao = 5, BinhLuan = "Air Max 90 huyền thoại!" }
         );
+
+        // Explicit precision mapping for percentage columns
+        modelBuilder.Entity<KhuyenMai>()
+            .Property(k => k.PhanTramGiam)
+            .HasPrecision(5, 2);
+
+        modelBuilder.Entity<Voucher>()
+            .Property(v => v.PhanTramGiam)
+            .HasPrecision(5, 2);
+
+        // Force singular uppercase table names and uppercase column names to match Oracle DB schema
+        foreach (var entity in modelBuilder.Model.GetEntityTypes())
+        {
+            var currentTableName = entity.GetTableName();
+            var clrTypeName = entity.ClrType.Name;
+            
+            string finalTableName;
+            if (!string.IsNullOrEmpty(currentTableName) && 
+                (currentTableName == clrTypeName + "s" || currentTableName == entity.GetDefaultTableName()))
+            {
+                finalTableName = clrTypeName.ToUpper();
+            }
+            else if (!string.IsNullOrEmpty(currentTableName))
+            {
+                finalTableName = currentTableName.ToUpper();
+            }
+            else
+            {
+                finalTableName = clrTypeName.ToUpper();
+            }
+
+            entity.SetTableName(finalTableName);
+
+            foreach (var property in entity.GetProperties())
+            {
+                var columnAttribute = property.PropertyInfo?.GetCustomAttributes(typeof(ColumnAttribute), true)
+                    .FirstOrDefault() as ColumnAttribute;
+
+                if (columnAttribute != null && !string.IsNullOrEmpty(columnAttribute.Name))
+                {
+                    property.SetColumnName(columnAttribute.Name.ToUpper());
+                }
+                else
+                {
+                    property.SetColumnName(property.Name.ToUpper());
+                }
+            }
+        }
+    }
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        // Global decimal configuration mapping to NUMBER(19,4) in Oracle database
+        configurationBuilder.Properties<decimal>().HavePrecision(19, 4);
     }
 }

@@ -8,8 +8,14 @@ export function Newsletter() {
       <div className="absolute inset-0 bg-gradient-to-br from-orange-600/10 via-transparent to-purple-600/10" />
       <div className="absolute top-0 left-1/4 w-96 h-96 bg-orange-500/5 rounded-full blur-3xl" />
       <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl" />
-      <div className="absolute inset-0 opacity-[0.03]" style={{backgroundImage:'radial-gradient(circle,#fff 1px,transparent 1px)',backgroundSize:'32px 32px'}} />
-      
+      <div
+        className="absolute inset-0 opacity-[0.03]"
+        style={{
+          backgroundImage: "radial-gradient(circle,#fff 1px,transparent 1px)",
+          backgroundSize: "32px 32px",
+        }}
+      />
+
       <div className="container mx-auto px-4 lg:px-8 text-center relative">
         <div className="inline-flex items-center gap-2 bg-white/10 text-white/80 px-4 py-2 rounded-full text-sm font-medium mb-6 backdrop-blur-sm">
           <Sparkles className="h-4 w-4 text-orange-400" />
@@ -19,9 +25,13 @@ export function Newsletter() {
           Gia Nhập <span className="text-gradient">Sneaker Club</span>
         </h2>
         <p className="mt-4 text-gray-400 text-lg max-w-md mx-auto leading-relaxed">
-          Là người đầu tiên nhận thông báo về mẫu mới, ưu đãi độc quyền và tin tức sneaker nội bộ.
+          Là người đầu tiên nhận thông báo về mẫu mới, ưu đãi độc quyền và tin
+          tức sneaker nội bộ.
         </p>
-        <form className="mt-8 flex max-w-md mx-auto gap-3" onSubmit={(e) => e.preventDefault()}>
+        <form
+          className="mt-8 flex max-w-md mx-auto gap-3"
+          onSubmit={(e) => e.preventDefault()}
+        >
           <Input
             type="email"
             placeholder="Nhập email của bạn"
@@ -35,7 +45,10 @@ export function Newsletter() {
             Đăng Ký
           </Button>
         </form>
-        <p className="mt-4 text-xs text-gray-500">Không spam, có thể hủy bất cứ lúc nào. Tham gia cùng 50,000+ sneakerhead.</p>
+        <p className="mt-4 text-xs text-gray-500">
+          Không spam, có thể hủy bất cứ lúc nào. Tham gia cùng 50,000+
+          sneakerhead.
+        </p>
       </div>
     </section>
   );

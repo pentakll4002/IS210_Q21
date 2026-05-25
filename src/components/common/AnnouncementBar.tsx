@@ -3,8 +3,14 @@ import { Zap, Truck, RefreshCw } from "lucide-react";
 
 const announcements = [
   { icon: Zap, text: "⚡ FLASH SALE — GIẢM 30% HÀNG MỚI VỀ | MÃ: SNEAK30" },
-  { icon: Truck, text: "🚚 MIỄN PHÍ GIAO HÀNG ĐƠN TỪ 3 TRIỆU — THỜI GIAN CÓ HẠN" },
-  { icon: RefreshCw, text: "🔄 MIỄN PHÍ ĐỔI TRẢ 30 NGÀY — MUA SẮM KHÔNG RỦI RO" },
+  {
+    icon: Truck,
+    text: "🚚 MIỄN PHÍ GIAO HÀNG ĐƠN TỪ 3 TRIỆU — THỜI GIAN CÓ HẠN",
+  },
+  {
+    icon: RefreshCw,
+    text: "🔄 MIỄN PHÍ ĐỔI TRẢ 30 NGÀY — MUA SẮM KHÔNG RỦI RO",
+  },
 ];
 
 export function AnnouncementBar() {

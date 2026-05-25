@@ -74,7 +74,16 @@ public class SanPhamController : ControllerBase
             .Where(dg => dg.MaSanPham == id)
             .ToListAsync();
 
-        return Ok(new { sanPham = sp, soDanhGia = danhGias.Count, diemTrungBinh = danhGias.Count > 0 ? danhGias.Average(dg => dg.SoSao) : 0 });
+        var kichCos = await _context.KichCoSanPhams
+            .Where(kc => kc.Masanpham == id)
+            .ToListAsync();
+
+        return Ok(new { 
+            sanPham = sp, 
+            kichCos = kichCos,
+            soDanhGia = danhGias.Count, 
+            diemTrungBinh = danhGias.Count > 0 ? danhGias.Average(dg => dg.SoSao) : 0 
+        });
     }
 
     // POST /api/sanpham - Thêm sản phẩm (tương đương PROC INSERT_SANPHAM)

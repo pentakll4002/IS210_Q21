@@ -11,8 +11,6 @@ import { productsService, type SanPham } from "@/services/products";
 import { useEffect, useState } from "react";
 import { Database, Server, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
-
-
 export const Route = createFileRoute("/")({
   component: Index,
 });
@@ -25,7 +23,7 @@ function Index() {
   useEffect(() => {
     const fetchProducts = async () => {
       try {
-        const res = await productsService.getAll({ soLuong: 50 });
+        const res = await productsService.getAll({ soLuong: 500 });
         if (res.danhSach && res.danhSach.length > 0) {
           setApiProducts(res.danhSach);
           setDbConnected(true);
@@ -44,9 +42,14 @@ function Index() {
   const products = apiProducts;
 
   const newArrivals = products.filter((p) => p.maDanhMuc === "DM1");
-  const bestSellers = products.filter((p) => p.maDanhMuc === "DM2");
+  let bestSellers = products.filter((p) => p.maDanhMuc === "DM2");
+  if (bestSellers.length === 0 && products.length > 0) {
+    bestSellers = products.slice(4, 12); // Fallback to select a few products
+  }
   const sneakers = products.filter((p) => p.maDanhMuc === "DM3");
-  const apparel = products.filter((p) => p.maDanhMuc === "DM4" || p.maDanhMuc === "DM5");
+  const apparel = products.filter(
+    (p) => p.maDanhMuc === "DM4" || p.maDanhMuc === "DM5",
+  );
 
   return (
     <div className="min-h-screen flex flex-col bg-white">
@@ -58,13 +61,20 @@ function Index() {
 
         {/* Oracle Connection Status Badge */}
         <div className="container mx-auto px-4 lg:px-8 py-4">
-          <div className={`inline-flex items-center gap-3 px-5 py-3 rounded-2xl border text-sm font-medium transition-all duration-500 ${
-            loading ? 'bg-gray-50 border-gray-200 text-gray-500' :
-            dbConnected ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm shadow-emerald-100' :
-            'bg-amber-50 border-amber-200 text-amber-700'
-          }`}>
+          <div
+            className={`inline-flex items-center gap-3 px-5 py-3 rounded-2xl border text-sm font-medium transition-all duration-500 ${
+              loading
+                ? "bg-gray-50 border-gray-200 text-gray-500"
+                : dbConnected
+                  ? "bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm shadow-emerald-100"
+                  : "bg-amber-50 border-amber-200 text-amber-700"
+            }`}
+          >
             {loading ? (
-              <><Loader2 className="h-4 w-4 animate-spin" /> Đang kết nối Oracle Database...</>
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" /> Đang kết nối Oracle
+                Database...
+              </>
             ) : dbConnected ? (
               <>
                 <div className="flex items-center gap-1.5">
@@ -91,11 +101,23 @@ function Index() {
           </div>
         </div>
 
-        <ProductSection id="hang-moi-ve" title="Hàng Mới Về" products={newArrivals} />
+        <ProductSection
+          id="hang-moi-ve"
+          title="Hàng Mới Về"
+          products={newArrivals}
+        />
         <FeaturedCategories />
-        <ProductSection id="ban-chay" title="Bán Chạy Nhất" products={bestSellers} />
+        <ProductSection
+          id="ban-chay"
+          title="Bán Chạy Nhất"
+          products={bestSellers}
+        />
         <ProductSection id="sneaker" title="Giày Sneaker" products={sneakers} />
-        <ProductSection id="quan-ao" title="Quần Áo & Streetwear" products={apparel} />
+        <ProductSection
+          id="quan-ao"
+          title="Quần Áo & Streetwear"
+          products={apparel}
+        />
         <Newsletter />
       </main>
       <Footer />
