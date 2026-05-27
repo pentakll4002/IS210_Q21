@@ -41,15 +41,17 @@ function Index() {
 
   const products = apiProducts;
 
-  const newArrivals = products.filter((p) => p.maDanhMuc === "DM1");
+  const newArrivals = products.filter((p) => p.maDanhMuc === "DM1").slice(0, 12);
   let bestSellers = products.filter((p) => p.maDanhMuc === "DM2");
   if (bestSellers.length === 0 && products.length > 0) {
-    bestSellers = products.slice(4, 12); // Fallback to select a few products
+    bestSellers = products.slice(4, 16); // Fallback to select 12 products
+  } else {
+    bestSellers = bestSellers.slice(0, 12);
   }
-  const sneakers = products.filter((p) => p.maDanhMuc === "DM3");
+  const sneakers = products.filter((p) => p.maDanhMuc === "DM3").slice(0, 12);
   const apparel = products.filter(
     (p) => p.maDanhMuc === "DM4" || p.maDanhMuc === "DM5",
-  );
+  ).slice(0, 12);
 
   return (
     <div className="min-h-screen flex flex-col bg-white">

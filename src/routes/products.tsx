@@ -27,7 +27,7 @@ function ProductsPage() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("default");
   const [currentPage, setCurrentPage] = useState(1);
-  const productsPerPage = 20;
+  const productsPerPage = 12;
 
   useEffect(() => {
     setCurrentPage(1);

@@ -238,7 +238,204 @@ BEGIN
 END;
 /
 
+-- ============================================================
+-- DEMO 2.5: NON-REPEATABLE READ
+-- ============================================================
+
 PROMPT
 PROMPT ============================================================
-PROMPT HOAN THANH PHAN 2: DIRTY READ VA LOST UPDATE!
+PROMPT DEMO 2.5: NON-REPEATABLE READ
+PROMPT (Doc 2 lan trong 1 transaction, ket qua khac nhau)
+PROMPT ============================================================
+
+CREATE OR REPLACE PROCEDURE COMMIT_PRICE_CHANGE(p_masp VARCHAR2, p_gia NUMBER) IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    UPDATE SANPHAM SET Gia = p_gia WHERE Masanpham = p_masp;
+    COMMIT;
+END;
+/
+
+DECLARE
+    v_masp     VARCHAR2(10);
+    v_gia_old  NUMBER;
+    v_gia_1    NUMBER;
+    v_gia_2    NUMBER;
+BEGIN
+    SELECT Masanpham, Gia INTO v_masp, v_gia_old
+    FROM (SELECT Masanpham, Gia FROM SANPHAM WHERE Gia > 1000000 ORDER BY Masanpham)
+    WHERE ROWNUM = 1;
+
+    DBMS_OUTPUT.PUT_LINE('=== NON-REPEATABLE READ (READ COMMITTED) ===');
+    DBMS_OUTPUT.PUT_LINE('San pham: ' || v_masp || ' | Gia ban dau: ' || v_gia_old);
+    DBMS_OUTPUT.PUT_LINE('');
+
+    -- Lan doc 1
+    SELECT Gia INTO v_gia_1 FROM SANPHAM WHERE Masanpham = v_masp;
+    DBMS_OUTPUT.PUT_LINE('[Lan 1] Doc gia: ' || v_gia_1);
+
+    -- Session khac thay doi gia VA COMMIT
+    COMMIT_PRICE_CHANGE(v_masp, v_gia_old + 500000);
+
+    -- Lan doc 2 (cung transaction nhung thay gia khac!)
+    SELECT Gia INTO v_gia_2 FROM SANPHAM WHERE Masanpham = v_masp;
+    DBMS_OUTPUT.PUT_LINE('[Lan 2] Doc gia: ' || v_gia_2);
+
+    DBMS_OUTPUT.PUT_LINE('');
+    IF v_gia_1 != v_gia_2 THEN
+        DBMS_OUTPUT.PUT_LINE('=> NON-REPEATABLE READ XAY RA!');
+        DBMS_OUTPUT.PUT_LINE('   Lan 1: ' || v_gia_1 || ' != Lan 2: ' || v_gia_2);
+        DBMS_OUTPUT.PUT_LINE('   Nguyen nhan: READ COMMITTED doc lai sau khi session khac COMMIT');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('=> Non-Repeatable Read KHONG xay ra');
+    END IF;
+
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('=== KHAC PHUC: DUNG SERIALIZABLE ===');
+    DBMS_OUTPUT.PUT_LINE('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;');
+    DBMS_OUTPUT.PUT_LINE('-> Toan bo transaction se doc snapshot co dinh');
+    DBMS_OUTPUT.PUT_LINE('-> 2 lan doc cho cung ket qua');
+
+    -- Khoi phuc
+    UPDATE SANPHAM SET Gia = v_gia_old WHERE Masanpham = v_masp;
+    COMMIT;
+END;
+/
+
+DROP PROCEDURE COMMIT_PRICE_CHANGE;
+
+-- ============================================================
+-- DEMO 2.6: PHANTOM READ
+-- ============================================================
+
+PROMPT
+PROMPT ============================================================
+PROMPT DEMO 2.6: PHANTOM READ
+PROMPT (Count 2 lan, ket qua khac do INSERT tu session khac)
+PROMPT ============================================================
+
+CREATE OR REPLACE PROCEDURE INSERT_PHANTOM_PRODUCT IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    INSERT INTO SANPHAM (Masanpham, TenSP, Madanhmuc, Mathuonghieu, Gia, SoLuong)
+    VALUES ('PHANTOM1', 'Phantom Test Shoe', 'DM1', 'TH1', 999999, 10);
+    COMMIT;
+END;
+/
+
+CREATE OR REPLACE PROCEDURE DELETE_PHANTOM_PRODUCT IS
+    PRAGMA AUTONOMOUS_TRANSACTION;
+BEGIN
+    DELETE FROM SANPHAM WHERE Masanpham = 'PHANTOM1';
+    COMMIT;
+END;
+/
+
+DECLARE
+    v_count_1 NUMBER;
+    v_count_2 NUMBER;
+BEGIN
+    -- Dam bao sach
+    DELETE_PHANTOM_PRODUCT;
+
+    DBMS_OUTPUT.PUT_LINE('=== PHANTOM READ (READ COMMITTED) ===');
+    DBMS_OUTPUT.PUT_LINE('');
+
+    -- Lan count 1
+    SELECT COUNT(*) INTO v_count_1 FROM SANPHAM WHERE Gia > 500000 AND TrangThai = 'CONHANG';
+    DBMS_OUTPUT.PUT_LINE('[Lan 1] COUNT san pham gia > 500K: ' || v_count_1);
+
+    -- Session khac INSERT san pham moi VA COMMIT
+    INSERT_PHANTOM_PRODUCT;
+
+    -- Lan count 2 (xuat hien "ban ma" - phantom row)
+    SELECT COUNT(*) INTO v_count_2 FROM SANPHAM WHERE Gia > 500000 AND TrangThai = 'CONHANG';
+    DBMS_OUTPUT.PUT_LINE('[Lan 2] COUNT san pham gia > 500K: ' || v_count_2);
+
+    DBMS_OUTPUT.PUT_LINE('');
+    IF v_count_2 > v_count_1 THEN
+        DBMS_OUTPUT.PUT_LINE('=> PHANTOM READ XAY RA!');
+        DBMS_OUTPUT.PUT_LINE('   ' || v_count_1 || ' -> ' || v_count_2 || ' (tang ' || (v_count_2 - v_count_1) || ' "ban ma")');
+        DBMS_OUTPUT.PUT_LINE('   Nguyen nhan: Session khac INSERT + COMMIT giua 2 lan doc');
+    ELSE
+        DBMS_OUTPUT.PUT_LINE('=> Phantom Read KHONG xay ra');
+    END IF;
+
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('=== KHAC PHUC: DUNG SERIALIZABLE ===');
+    DBMS_OUTPUT.PUT_LINE('SET TRANSACTION ISOLATION LEVEL SERIALIZABLE;');
+    DBMS_OUTPUT.PUT_LINE('-> Snapshot co dinh, INSERT tu session khac khong anh huong');
+
+    -- Don dep
+    DELETE_PHANTOM_PRODUCT;
+END;
+/
+
+DROP PROCEDURE INSERT_PHANTOM_PRODUCT;
+DROP PROCEDURE DELETE_PHANTOM_PRODUCT;
+
+-- ============================================================
+-- DEMO 2.7: DEADLOCK VA CACH PHONG CHONG
+-- ============================================================
+
+PROMPT
+PROMPT ============================================================
+PROMPT DEMO 2.7: DEADLOCK - ORACLE TU DONG PHAT HIEN
+PROMPT ============================================================
+
+DECLARE
+    v_masp1 VARCHAR2(10);
+    v_masp2 VARCHAR2(10);
+    v_sl1   NUMBER;
+    v_sl2   NUMBER;
+BEGIN
+    SELECT Masanpham, SoLuong INTO v_masp1, v_sl1
+    FROM (SELECT Masanpham, SoLuong FROM SANPHAM WHERE SoLuong > 5 ORDER BY Masanpham)
+    WHERE ROWNUM = 1;
+
+    SELECT Masanpham, SoLuong INTO v_masp2, v_sl2
+    FROM (SELECT Masanpham, SoLuong FROM SANPHAM WHERE SoLuong > 5 AND Masanpham != v_masp1 ORDER BY Masanpham)
+    WHERE ROWNUM = 1;
+
+    DBMS_OUTPUT.PUT_LINE('=== DEADLOCK SCENARIO ===');
+    DBMS_OUTPUT.PUT_LINE('SP1: ' || v_masp1 || ' | SP2: ' || v_masp2);
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('Kich ban Deadlock (2 sessions):');
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('  Session A                    Session B');
+    DBMS_OUTPUT.PUT_LINE('  ─────────                    ─────────');
+    DBMS_OUTPUT.PUT_LINE('  LOCK ' || v_masp1 || '                  LOCK ' || v_masp2);
+    DBMS_OUTPUT.PUT_LINE('  ... doi ...                  ... doi ...');
+    DBMS_OUTPUT.PUT_LINE('  Muon LOCK ' || v_masp2 || '             Muon LOCK ' || v_masp1);
+    DBMS_OUTPUT.PUT_LINE('  => BI BLOCK!                 => BI BLOCK!');
+    DBMS_OUTPUT.PUT_LINE('  => DEADLOCK!');
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('Oracle tu dong phat hien deadlock:');
+    DBMS_OUTPUT.PUT_LINE('  - Error: ORA-00060: deadlock detected');
+    DBMS_OUTPUT.PUT_LINE('  - Oracle ROLLBACK 1 trong 2 transaction');
+    DBMS_OUTPUT.PUT_LINE('  - Transaction con lai tiep tuc');
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('=== CACH PHONG CHONG DEADLOCK ===');
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('1. LOCK THEO THU TU CO DINH:');
+    DBMS_OUTPUT.PUT_LINE('   Luon lock theo thu tu Masanpham tang dan');
+    DBMS_OUTPUT.PUT_LINE('   VD: Lock ' || v_masp1 || ' truoc, roi moi lock ' || v_masp2);
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('2. DUNG TIMEOUT:');
+    DBMS_OUTPUT.PUT_LINE('   SELECT ... FOR UPDATE WAIT 5;');
+    DBMS_OUTPUT.PUT_LINE('   -> Neu khong lock duoc trong 5s, tra ve loi');
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('3. DUNG NOWAIT:');
+    DBMS_OUTPUT.PUT_LINE('   SELECT ... FOR UPDATE NOWAIT;');
+    DBMS_OUTPUT.PUT_LINE('   -> Tra ve loi ngay neu row dang bi lock');
+    DBMS_OUTPUT.PUT_LINE('');
+    DBMS_OUTPUT.PUT_LINE('4. THU TU TRUY CAP NHAT QUAN:');
+    DBMS_OUTPUT.PUT_LINE('   Moi module trong app luon truy cap bang theo cung thu tu');
+END;
+/
+
+PROMPT
+PROMPT ============================================================
+PROMPT HOAN THANH PHAN 2: DIRTY READ, LOST UPDATE,
+PROMPT NON-REPEATABLE READ, PHANTOM READ, DEADLOCK!
 PROMPT ============================================================
