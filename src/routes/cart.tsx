@@ -13,11 +13,17 @@ import {  Minus,
   ArrowLeft,
 } from "lucide-react";
 
+import { useEffect } from "react";
+
 export const Route = createFileRoute("/cart")({ component: CartPage });
 
 function CartPage() {
-  const { items, removeItem, updateQuantity, totalPrice, totalItems } =
+  const { items, removeItem, updateQuantity, totalPrice, totalItems, setDirectCheckoutItem } =
     useCart();
+
+  useEffect(() => {
+    setDirectCheckoutItem(null);
+  }, [setDirectCheckoutItem]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-50">

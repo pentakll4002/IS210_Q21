@@ -123,14 +123,61 @@ public class AppDbContext : DbContext
             var demoUsers = db.NguoiDungs.Where(u => u.Email.EndsWith("@example.com") || u.TenND.Contains("Test") || u.TenND.Contains("test")).ToList();
             if (demoUsers.Any())
             {
+                var demoUserIds = demoUsers.Select(u => u.MaNguoiDung).ToList();
+
+                // Delete related records to prevent ORA-02292 constraint violations
+                var tbs = db.ThongBaos.Where(t => demoUserIds.Contains(t.MaNguoiDung)).ToList();
+                if (tbs.Any()) db.ThongBaos.RemoveRange(tbs);
+
+                var lstks = db.LichSuTimKiems.Where(l => demoUserIds.Contains(l.MaNguoiDung)).ToList();
+                if (lstks.Any()) db.LichSuTimKiems.RemoveRange(lstks);
+
+                var spyts = db.SanPhamYeuThichs.Where(s => demoUserIds.Contains(s.MaNguoiDung)).ToList();
+                if (spyts.Any()) db.SanPhamYeuThichs.RemoveRange(spyts);
+
+                var dcghs = db.DiaChiGiaoHangs.Where(d => demoUserIds.Contains(d.MaNguoiDung)).ToList();
+                if (dcghs.Any()) db.DiaChiGiaoHangs.RemoveRange(dcghs);
+
+                var vnds = db.VoucherNguoiDungs.Where(v => demoUserIds.Contains(v.MaNguoiDung)).ToList();
+                if (vnds.Any()) db.VoucherNguoiDungs.RemoveRange(vnds);
+
+                var bltts = db.BinhLuanTinTucs.Where(b => demoUserIds.Contains(b.MaNguoiDung)).ToList();
+                if (bltts.Any()) db.BinhLuanTinTucs.RemoveRange(bltts);
+
+                var dgs = db.DanhGias.Where(d => demoUserIds.Contains(d.MaNguoiDung)).ToList();
+                if (dgs.Any()) db.DanhGias.RemoveRange(dgs);
+
+                var ghs = db.GioHangs.Where(g => demoUserIds.Contains(g.MaNguoiDung)).ToList();
+                if (ghs.Any())
+                {
+                    var ghIds = ghs.Select(g => g.MaGioHang).ToList();
+                    var ctghs = db.ChiTietGioHangs.Where(c => ghIds.Contains(c.MaGioHang)).ToList();
+                    if (ctghs.Any()) db.ChiTietGioHangs.RemoveRange(ctghs);
+                    db.GioHangs.RemoveRange(ghs);
+                }
+
+                var dhs = db.DonHangs.Where(d => demoUserIds.Contains(d.MaNguoiDung)).ToList();
+                if (dhs.Any())
+                {
+                    var dhIds = dhs.Select(d => d.MaDonHang).ToList();
+                    var ctdhs = db.ChiTietDonHangs.Where(c => dhIds.Contains(c.MaDonHang)).ToList();
+                    if (ctdhs.Any()) db.ChiTietDonHangs.RemoveRange(ctdhs);
+
+                    var tts = db.ThanhToans.Where(t => dhIds.Contains(t.MaDonHang)).ToList();
+                    if (tts.Any()) db.ThanhToans.RemoveRange(tts);
+
+                    db.DonHangs.RemoveRange(dhs);
+                }
+
                 db.NguoiDungs.RemoveRange(demoUsers);
                 db.SaveChanges();
-                Console.WriteLine($"[AppDbContext] Cleared {demoUsers.Count} demo/test users.");
+                Console.WriteLine($"[AppDbContext] Cleared {demoUsers.Count} demo/test users and their associated child records.");
             }
         }
         catch (Exception ex)
         {
             Console.WriteLine("Warning: Failed to delete demo users: " + ex.Message);
+            db.ChangeTracker.Clear();
         }
 
         try
@@ -359,6 +406,7 @@ public class AppDbContext : DbContext
         catch (Exception ex)
         {
             Console.WriteLine($"[AppDbContext] Warning: Could not fix category names: {ex.Message}");
+            db.ChangeTracker.Clear();
         }
     }
 

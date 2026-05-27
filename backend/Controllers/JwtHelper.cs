@@ -76,7 +76,7 @@ public static class JwtHelper
 
             var principal = handler.ValidateToken(token, parameters, out _);
             var role = principal.FindFirst(ClaimTypes.Role)?.Value;
-            return role == "ADMIN";
+            return string.Equals(role, "ADMIN", StringComparison.OrdinalIgnoreCase);
         }
         catch
         {

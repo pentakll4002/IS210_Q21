@@ -137,9 +137,58 @@ public class NguoiDungController : ControllerBase
 
         return Ok(new { thongBao = "Đổi mật khẩu thành công!" });
     }
+
+    // GET /api/nguoidung/admin/all - Admin lấy tất cả người dùng
+    [HttpGet("admin/all")]
+    public async Task<ActionResult> GetAdminAllUsers([FromHeader] string Authorization)
+    {
+        var isAdmin = JwtHelper.IsAdmin(Authorization, _config["Jwt:Key"] ?? "SneakerShopSecretKey2024MinLength32Chars!");
+        if (!isAdmin) return Forbid();
+
+        var users = await _context.NguoiDungs
+            .Select(u => new { u.MaNguoiDung, u.TenND, u.Email, u.SoDienThoai, u.DiaChi, u.VaiTro, u.NgayTao })
+            .OrderByDescending(u => u.NgayTao)
+            .ToListAsync();
+
+        return Ok(users);
+    }
+
+    // GET /api/nguoidung/admin/stats - Admin dashboard stats
+    [HttpGet("admin/stats")]
+    public async Task<ActionResult> GetAdminStats([FromHeader] string Authorization)
+    {
+        var isAdmin = JwtHelper.IsAdmin(Authorization, _config["Jwt:Key"] ?? "SneakerShopSecretKey2024MinLength32Chars!");
+        if (!isAdmin) return Forbid();
+
+        var tongSanPham = await _context.SanPhams.CountAsync();
+        var tongDonHang = await _context.DonHangs.CountAsync();
+        var tongKhachHang = await _context.NguoiDungs.CountAsync(u => u.VaiTro == "KHACHHANG");
+        var tongDoanhThu = await _context.DonHangs
+            .Where(d => d.TrangThai != "DAHUY")
+            .SumAsync(d => d.TongCong);
+        var donChoXuLy = await _context.DonHangs.CountAsync(d => d.TrangThai == "CHOXULY");
+        var donDangXuLy = await _context.DonHangs.CountAsync(d => d.TrangThai == "DANGXULY");
+        var donDaGiao = await _context.DonHangs.CountAsync(d => d.TrangThai == "DAGIAO");
+        var donDaHuy = await _context.DonHangs.CountAsync(d => d.TrangThai == "DAHUY");
+        var spHetHang = await _context.SanPhams.CountAsync(s => s.TrangThai == "HETHANG");
+
+        return Ok(new
+        {
+            tongSanPham,
+            tongDonHang,
+            tongKhachHang,
+            tongDoanhThu,
+            donChoXuLy,
+            donDangXuLy,
+            donDaGiao,
+            donDaHuy,
+            spHetHang
+        });
+    }
 }
 
 public class DangNhapRequest { public string Email { get; set; } = string.Empty; public string MatKhau { get; set; } = string.Empty; }
 public class DangKyRequest { public string TenND { get; set; } = string.Empty; public string Email { get; set; } = string.Empty; public string MatKhau { get; set; } = string.Empty; public string Captcha { get; set; } = string.Empty; }
 public class CapNhatNguoiDungRequest { public string? TenND { get; set; } public string? SoDienThoai { get; set; } public string? DiaChi { get; set; } }
 public class DoiMatKhauRequest { public string MatKhauCu { get; set; } = string.Empty; public string MatKhauMoi { get; set; } = string.Empty; }
+

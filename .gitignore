@@ -32,3 +32,7 @@ backend/obj/
 
 __pycache__
 .claude
+
+Dockerfile
+docker-compose.yml
+nginx.conf

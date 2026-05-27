@@ -23,7 +23,7 @@ import {
 export const Route = createFileRoute("/checkout")({ component: CheckoutPage });
 
 function CheckoutPage() {
-  const { items, totalPrice, clearCart } = useCart();
+  const { items: cartItems, totalPrice: cartTotalPrice, clearCart, directCheckoutItem, setDirectCheckoutItem } = useCart();
   const { user } = useAuth();
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -34,6 +34,12 @@ function CheckoutPage() {
   const [showQrModal, setShowQrModal] = useState(false);
   const [createdOrderId, setCreatedOrderId] = useState("");
   const [checkingPayment, setCheckingPayment] = useState(false);
+
+  const isDirect = directCheckoutItem !== null;
+  const items = isDirect ? [directCheckoutItem] : cartItems;
+  const totalPrice = isDirect
+    ? (directCheckoutItem.product.gia * directCheckoutItem.quantity)
+    : cartTotalPrice;
 
   const [form, setForm] = useState({
     name: user?.name || "",
@@ -105,7 +111,11 @@ function CheckoutPage() {
         } else {
           // If credit card, pay and success immediately
           await ordersService.thanhToan(orderRes.maDonHang, "Credit Card");
-          clearCart();
+          if (isDirect) {
+            setDirectCheckoutItem(null);
+          } else {
+            clearCart();
+          }
           navigate({ to: "/order-success" });
         }
       }
@@ -140,7 +150,11 @@ function CheckoutPage() {
         }
         setCheckingPayment(false);
         setShowQrModal(false);
-        clearCart();
+        if (isDirect) {
+          setDirectCheckoutItem(null);
+        } else {
+          clearCart();
+        }
         navigate({ to: "/order-success" });
       } catch (err) {
         setCheckingPayment(false);

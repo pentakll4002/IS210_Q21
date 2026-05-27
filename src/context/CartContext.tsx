@@ -15,6 +15,8 @@ interface CartContextType {
   clearCart: () => void;
   totalItems: number;
   totalPrice: number;
+  directCheckoutItem: CartItem | null;
+  setDirectCheckoutItem: (item: CartItem | null) => void;
 }
 
 const CartContext = createContext<CartContextType | null>(null);
@@ -118,6 +120,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return s + price * qty;
   }, 0);
 
+  const [directCheckoutItem, setDirectCheckoutState] = useState<CartItem | null>(() => {
+    const saved = sessionStorage.getItem("sneaksurf_direct_checkout");
+    if (!saved) return null;
+    try {
+      return JSON.parse(saved);
+    } catch {
+      return null;
+    }
+  });
+
+  const setDirectCheckoutItem = (item: CartItem | null) => {
+    setDirectCheckoutState(item);
+    if (item) {
+      sessionStorage.setItem("sneaksurf_direct_checkout", JSON.stringify(item));
+    } else {
+      sessionStorage.removeItem("sneaksurf_direct_checkout");
+    }
+  };
+
   return (
     <CartContext.Provider
       value={{
@@ -128,6 +149,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clearCart,
         totalItems,
         totalPrice,
+        directCheckoutItem,
+        setDirectCheckoutItem,
       }}
     >
       {children}

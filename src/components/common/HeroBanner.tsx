@@ -44,9 +44,9 @@ export function HeroBanner() {
     soLuong: 10,
     trangThai: "CONHANG",
     ngayTao: "",
-    ngayCapNhat: null,
+    ngayCapNhat: "",
     moTa: "Phiên bản Jordan kinh điển.",
-    thuongHieu: { maThuongHieu: "TH1", tenTH: "Nike", quocGia: "USA" },
+    thuongHieu: { maThuongHieu: "TH1", tenTH: "Nike" },
   };
 
   const currentProduct = products[currentIndex] || fallbackProduct;
@@ -143,7 +143,7 @@ export function HeroBanner() {
                 className="absolute inset-[-10%] rounded-full border-2 border-dashed border-gray-200/60 animate-spin"
                 style={{ animationDuration: "30s" }}
               />
-              <Link to={`/product/${currentProduct.maSanPham}`}>
+              <Link to="/product/$id" params={{ id: currentProduct.maSanPham }}>
                 <div className="relative z-10 rounded-full overflow-hidden shadow-2xl shadow-gray-900/10 bg-white border border-gray-100 aspect-square flex items-center justify-center float-animation hover:scale-105 transition-transform duration-500 cursor-pointer">
                   <img
                     src={currentProduct.hinhAnh || undefined}
@@ -153,7 +153,7 @@ export function HeroBanner() {
                   <div className="absolute inset-0 bg-gradient-to-t from-black/10 via-transparent to-transparent pointer-events-none" />
                 </div>
               </Link>
-              <Link to={`/product/${currentProduct.maSanPham}`}>
+              <Link to="/product/$id" params={{ id: currentProduct.maSanPham }}>
                 <div
                   className="absolute -bottom-4 -left-8 z-20 bg-white rounded-2xl shadow-xl p-4 flex items-center gap-3 slide-up cursor-pointer hover:shadow-2xl hover:-translate-y-1 transition-all"
                   style={{ animationDelay: "0.5s" }}

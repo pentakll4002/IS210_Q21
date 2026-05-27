@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { Menu, Search, ShoppingBag, User, X, Heart } from "lucide-react";
+import { Menu, Search, ShoppingBag, User, X, Heart, Shield } from "lucide-react";
 import { Button } from "@/components/common/Button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/common/Sheet";
 import { Input } from "@/components/common/Input";
@@ -12,7 +12,7 @@ export function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { totalItems } = useCart();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -152,6 +152,18 @@ export function Header() {
               <Search className="h-5 w-5" />
               <span className="sr-only">Tìm kiếm</span>
             </Button>
+          )}
+          {isAuthenticated && user?.role === "ADMIN" && (
+            <Link to="/admin">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden sm:flex rounded-full text-orange-500 hover:bg-orange-50 hover:text-orange-600"
+              >
+                <Shield className="h-5 w-5" />
+                <span className="sr-only">Admin</span>
+              </Button>
+            </Link>
           )}
           <Link to={isAuthenticated ? "/account" : "/login"}>
             <Button

@@ -30,7 +30,7 @@ function mapUser(nd: NguoiDung): User {
     email: nd.email,
     phone: nd.soDienThoai ?? undefined,
     address: nd.diaChi ?? undefined,
-    role: nd.vaiTro,
+    role: nd.vaiTro?.toUpperCase(),
   };
 }
 

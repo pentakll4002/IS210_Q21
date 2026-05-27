@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { AnnouncementBar } from "@/components/common/AnnouncementBar";
 import { Header } from "@/components/common/Header";
 import { Footer } from "@/components/common/Footer";
@@ -30,7 +30,8 @@ export const Route = createFileRoute("/product/$id")({
 
 function ProductDetailPage() {
   const { id } = Route.useParams();
-  const { addItem } = useCart();
+  const navigate = useNavigate();
+  const { addItem, setDirectCheckoutItem } = useCart();
   const [selectedSize, setSelectedSize] = useState("US 9");
   const [added, setAdded] = useState(false);
   const [qty, setQty] = useState(1);
@@ -139,6 +140,12 @@ function ProductDetailPage() {
     addItem(product, selectedSize, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleBuyNow = () => {
+    if (product.trangThai === "HETHANG" || !selectedSize) return;
+    setDirectCheckoutItem({ product, quantity: 1, size: selectedSize });
+    navigate({ to: "/checkout" });
   };
 
   return (
@@ -304,11 +311,19 @@ function ProductDetailPage() {
               </div>
 
               {/* Actions */}
-              <div className="flex gap-3 mt-8">
+              <div className="flex flex-col gap-3 mt-8">
+                <button
+                  onClick={handleBuyNow}
+                  disabled={product.trangThai === "HETHANG" || !selectedSize}
+                  className={`w-full h-14 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-300 shadow-lg ${product.trangThai === "HETHANG" || !selectedSize ? "bg-gray-200 text-gray-500 cursor-not-allowed shadow-none" : "bg-gradient-to-r from-orange-500 to-orange-600 text-white hover:from-orange-600 hover:to-orange-700 shadow-orange-500/20"}`}
+                >
+                  Mua Ngay (Chỉ 1 Sản Phẩm) — {formatPrice(product.gia)}
+                </button>
+
                 <button
                   onClick={handleAdd}
                   disabled={product.trangThai === "HETHANG" || !selectedSize}
-                  className={`flex-1 h-14 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-300 shadow-lg ${added ? "bg-green-600 text-white shadow-green-600/20" : product.trangThai === "HETHANG" || !selectedSize ? "bg-gray-200 text-gray-500 cursor-not-allowed shadow-none" : "bg-gray-900 text-white hover:bg-gray-800 shadow-gray-900/20"}`}
+                  className={`w-full h-14 rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all duration-300 border ${added ? "bg-green-600 text-white border-green-600 shadow-green-600/20" : product.trangThai === "HETHANG" || !selectedSize ? "bg-gray-100 text-gray-400 cursor-not-allowed border-none shadow-none" : "bg-white text-gray-900 border-gray-300 hover:bg-gray-50 hover:border-gray-400"}`}
                 >
                   {added ? (
                     <>
