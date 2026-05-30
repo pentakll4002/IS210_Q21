@@ -1369,13 +1369,14 @@ EXCEPTION WHEN NO_DATA_FOUND THEN RAISE_ERROR(-20002);
 END;
 /
 
--- P4: Đặt hàng (kiểm tra tồn kho)
+-- P4: Đặt hàng (kiểm tra tồn kho - Đã cấu hình khóa FOR UPDATE để ngăn ngừa Lost Update & Concurrency)
 CREATE OR REPLACE PROCEDURE DAT_HANG(
     p_Manguoidung IN VARCHAR2, p_TenNguoiNhan IN VARCHAR2, p_SdtNguoiNhan IN VARCHAR2,
     p_DiaChiGiao IN VARCHAR2, p_ThanhPho IN VARCHAR2, p_Masanpham IN VARCHAR2, p_KichCo IN VARCHAR2, p_SoLuong IN NUMBER
 ) IS v_Madonhang VARCHAR2(10); v_SLTon NUMBER; v_Gia NUMBER(19,4); v_TT VARCHAR2(20);
 BEGIN
-    SELECT SoLuong, Gia, TrangThai INTO v_SLTon, v_Gia, v_TT FROM SANPHAM WHERE Masanpham = p_Masanpham;
+    -- Sử dụng khóa dòng FOR UPDATE để ngăn ngừa 2 khách hàng đồng thời đọc và ghi đè số lượng tồn kho (Lost Update)
+    SELECT SoLuong, Gia, TrangThai INTO v_SLTon, v_Gia, v_TT FROM SANPHAM WHERE Masanpham = p_Masanpham FOR UPDATE;
     IF v_TT = 'HETHANG' OR v_SLTon < p_SoLuong THEN RAISE_ERROR(-20003); END IF;
     INSERT INTO DONHANG (Manguoidung, TenNguoiNhan, SdtNguoiNhan, DiaChiGiao, ThanhPho) VALUES (p_Manguoidung, p_TenNguoiNhan, p_SdtNguoiNhan, p_DiaChiGiao, p_ThanhPho);
     SELECT Madonhang INTO v_Madonhang FROM DONHANG WHERE Manguoidung = p_Manguoidung ORDER BY NgayDat DESC FETCH FIRST 1 ROW ONLY;
